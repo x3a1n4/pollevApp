@@ -11,34 +11,30 @@ import com.google.android.material.snackbar.Snackbar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.os.StrictMode;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 public class MainActivity extends AppCompatActivity {
 
     String pollEvUrl;
-
-    public class WebAppInterface {
-        Context mContext;
-
-        /** Instantiate the interface and set the context */
-        WebAppInterface(Context c) {
-            mContext = c;
-        }
-
-        /** Show a toast from the web page */
-        @JavascriptInterface
-        public void showToast(String toast) {
-            Toast.makeText(mContext, toast, Toast.LENGTH_SHORT).show();
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,9 +44,15 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         final WebView myWebView = (WebView) findViewById(R.id.webView);
+
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
-        myWebView.addJavascriptInterface(new WebAppInterface(this), "Android");
+
+
+        //dismiss networkonmainthread error
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+
+        StrictMode.setThreadPolicy(policy);
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -63,11 +65,19 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         try{
+                            myWebView.clearCache(true);
+                            myWebView.clearFormData();
+
+                            CookieManager.getInstance().removeAllCookies(null);
+                            CookieManager.getInstance().flush();
+
+
                             String website = url.getText().toString();
                             System.out.println(website);
 
-
                             myWebView.loadUrl(website);
+
+                            pollEvUrl = website;
                         }catch(Exception e){
                             System.out.println(e);
                         }
@@ -81,6 +91,26 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton("Ok", onClickListener)
                         .setNegativeButton("Cancel", null)
                         .show();
+            }
+        });
+
+        FloatingActionButton reload = findViewById(R.id.reload);
+
+        reload.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                try{
+                    myWebView.clearCache(true);
+                    myWebView.clearFormData();
+
+                    CookieManager.getInstance().removeAllCookies(null);
+                    CookieManager.getInstance().flush();
+
+                    myWebView.loadUrl(pollEvUrl);
+                }catch(Exception e){
+                    System.out.println(e);
+                }
             }
         });
     }
